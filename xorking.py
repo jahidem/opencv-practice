@@ -82,7 +82,7 @@ def count_fruit(image):
 
 
 directory = "color_image_216"
-number = 14
+number = 4
 img_back = cv2.imread(directory + f"/{number}_back_whole.jpg")
 img_back = cv2.flip(img_back, 1)
 img_front = cv2.imread(directory + f"/{number}_front_whole.jpg")
@@ -90,9 +90,9 @@ img_front = cv2.imread(directory + f"/{number}_front_whole.jpg")
 
 front_back_list = [[], []]
 
-for index, img in enumerate([img_front, img_back]):
-    cv2.imshow("image", img)
-    img = cv2.medianBlur(img, 5, 3)
+for index, img_raw in enumerate([img_front, img_back]):
+    cv2.imshow("image", img_raw)
+    img = cv2.medianBlur(img_raw, 5, 3)
 
     hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -143,7 +143,7 @@ for index, img in enumerate([img_front, img_back]):
             cv2.drawContours(mask, [contour], -1, (255), thickness=cv2.FILLED)
 
             # Crop the region of interest (ROI) from the original image
-            cropped_image = img[y : y + h, x : x + w]
+            cropped_image = img_raw[y : y + h, x : x + w]
             cropped_images.append((x, cropped_image))
 
     cv2.imshow("whole", mask)
@@ -178,7 +178,8 @@ for sublist in front_back_list:
 min_length = min(len(front_back_list[0]), len(front_back_list[1]))
 
 for i in range(min_length):
-    result = cv2.addWeighted(front_back_list[0][i], 0.9, front_back_list[1][i], 0.9,-100)
-    cv2.imshow(f"plant {i}", result)
-    print(count_fruit(result))
+   
+    print(count_fruit(front_back_list[0][i]))
+    print(count_fruit(front_back_list[1][i]))
+    # print(count_duplicate_fruit(front_back_list[0][i], front_back_list[1][i]))
     cv2.waitKey(0)
