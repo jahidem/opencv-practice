@@ -269,7 +269,7 @@ for plant in range(1, 28):
     number = plant
     img_back = cv2.imread(directory + f"/-{number}.jpg")
     img_front = cv2.imread(directory + f"/{number}.jpg")
-    cv2.imshow('front {number}', img_front)
+    cv2.imshow(f'front {number}', img_front)
     cv2.imshow(f'back {number}', img_back)
 
     front_back_list = image_processing.get_plant_list(img_front, img_back)
