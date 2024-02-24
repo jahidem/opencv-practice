@@ -139,45 +139,44 @@ class IMAGE_PROCESSING:
         return [square_image for _, square_image in square_images]
 
     def get_square_image(self, contour, image) -> MatLike:
-        square_points = self.largest_contained_square(contour)
+        # square_points = self.largest_contained_square(contour)
+        epsilon = 0.04 * cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, epsilon, True)
+        x, y, w, h = cv2.boundingRect(approx)
+
         cv2.imshow("img", image)
-        print(square_points)
-        point_left = square_points[1]
         hsv_image = cv2.cvtColor(image.copy(), cv2.COLOR_BGR2HSV)
-        left_most = point_left
-        while left_most[0] < square_points[2][0]:
-            if self.white_lower[0] <= hsv_image[left_most[1]][left_most[0]][0] <= self.white_upper[0]:
+
+        left_most = [x, y]
+        while left_most[0] < x + w:
+            print(left_most)
+            if np.all(
+                np.logical_and(
+                    self.white_lower <= hsv_image[left_most[1]][left_most[0]],
+                    hsv_image[left_most[1]][left_most[0]] <= self.white_upper,
+                )
+            ):
                 break
             left_most[0] += 1
 
-
-        point_right = square_points[2]
-        right_most = point_right
-        while right_most[0] > square_points[1][0]:
-            if self.white_lower[0] <= hsv_image[left_most[1]][left_most[0]][0] <= self.white_upper[0]:
+        right_most = [x + w, y]
+        while right_most[0] > left_most[0]:
+            if np.logical_and(
+                (self.white_lower <= hsv_image[right_most[1]][right_most[0]]).all(),
+                (hsv_image[right_most[1]][right_most[0]] <= self.white_upper).all(),
+            ):
                 break
-            left_most[0] -= 1
+            right_most[0] -= 1
         # print(left_most)
         # print(right_most)
-        new_square_points = square_points.copy()
-        new_square_points[0] = left_most
-        new_square_points[1] = right_most
-        new_square_points[2] = [left_most[0] , square_points[2][1]]
-        new_square_points[3] = [right_most[0] , square_points[3][1]]
-        # Find bounding box coordinates of the contour
-        x, y, w, h = cv2.boundingRect(new_square_points)
 
         # Crop the region from the original image
-        cropped_image = image[y : y + h, x : x + w]
-
-        # Draw the square on a copy of the original image
-        result_image = image.copy()
-        cv2.drawContours(result_image, [square_points], 0, (0, 0, 0), 2)
+        cropped_image = image[y : y + h, left_most[0] : right_most[0]]
 
         return cropped_image
 
     def largest_contained_square(self, contour) -> MatLike:
-        epsilon = 0.16 * cv2.arcLength(contour, True)
+        epsilon = 0.04 * cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, epsilon, True)
         hull = cv2.convexHull(approx)
 
@@ -259,9 +258,9 @@ for plant in range(1, 28):
         cv2.imshow("front0", (front_back_list[0][i]))
         cv2.imshow("back0", (front_back_list[1][i]))
         cv2.waitKey(0)
-        print(front_count)
-        print(back_count)
-        print()
+        # print(front_count)
+        # print(back_count)
+        # print()
 
         sum_all = [i + j + k for i, j, k in zip(sum_all, front_count, back_count)]
-        print(sum_all)
+        # print(sum_all)
