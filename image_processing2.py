@@ -102,17 +102,6 @@ class IMAGE_PROCESSING:
 
         return iou
 
-    def largest_contained_square(self, contour) -> MatLike:
-        epsilon = 0.16 * cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, epsilon, True)
-        hull = cv2.convexHull(approx)
-
-        rect = cv2.minAreaRect(hull)
-        box = cv2.boxPoints(rect)
-        box = box.astype(int)
-
-        return box
-
     def get_white_parts(self, image) -> List[MatLike]:
         # Convert the image to HSV color space
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -138,7 +127,7 @@ class IMAGE_PROCESSING:
                 continue
 
             x, y = contour[0][0]
-            print(i, area, perimeter, contour[0][0], x, y)
+            # print(i, area, perimeter, contour[0][0], x, y)
             # cv2.drawContours(image_with_contours, [contour[0]], -1, (0, 0, 0), 2)
             cv2.drawContours(image_with_contours, [contour], -1, (0, 0, 0), 2)
             # break
@@ -151,9 +140,32 @@ class IMAGE_PROCESSING:
 
     def get_square_image(self, contour, image) -> MatLike:
         square_points = self.largest_contained_square(contour)
+        cv2.imshow("img", image)
+        print(square_points)
+        point_left = square_points[1]
+        hsv_image = cv2.cvtColor(image.copy(), cv2.COLOR_BGR2HSV)
+        left_most = point_left
+        while left_most[0] < square_points[2][0]:
+            if self.white_lower[0] <= hsv_image[left_most[1]][left_most[0]][0] <= self.white_upper[0]:
+                break
+            left_most[0] += 1
 
+
+        point_right = square_points[2]
+        right_most = point_right
+        while right_most[0] > square_points[1][0]:
+            if self.white_lower[0] <= hsv_image[left_most[1]][left_most[0]][0] <= self.white_upper[0]:
+                break
+            left_most[0] -= 1
+        # print(left_most)
+        # print(right_most)
+        new_square_points = square_points.copy()
+        new_square_points[0] = left_most
+        new_square_points[1] = right_most
+        new_square_points[2] = [left_most[0] , square_points[2][1]]
+        new_square_points[3] = [right_most[0] , square_points[3][1]]
         # Find bounding box coordinates of the contour
-        x, y, w, h = cv2.boundingRect(square_points)
+        x, y, w, h = cv2.boundingRect(new_square_points)
 
         # Crop the region from the original image
         cropped_image = image[y : y + h, x : x + w]
@@ -164,10 +176,20 @@ class IMAGE_PROCESSING:
 
         return cropped_image
 
+    def largest_contained_square(self, contour) -> MatLike:
+        epsilon = 0.16 * cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, epsilon, True)
+        hull = cv2.convexHull(approx)
+
+        rect = cv2.minAreaRect(hull)
+        box = cv2.boxPoints(rect)
+        box = box.astype(int)
+
+        return box
+
     def replace_green_with_white(self, image):
-        blur_image = cv2.medianBlur(image,3,3)
         # Convert the image to HSV color space
-        hsv_image = cv2.cvtColor(blur_image, cv2.COLOR_BGR2HSV)
+        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         # Threshold the image to get a binary mask for green
         green_mask = cv2.inRange(hsv_image, self.green_lower, self.green_upper)
@@ -218,77 +240,14 @@ class IMAGE_PROCESSING:
         return front_back_plants
 
 
-def find_topmost_point(contour, rightmost=True):
-    # Initialize variables to store the topmost point and its x-coordinate
-    topmost_point = None
-    topmost_x = None
-
-    # Iterate over all points in the contour
-    for point in contour:
-        # Get the x and y coordinates of the current point
-        x, y = point[0]
-        print("Point:", x, y)
-
-        # Update the topmost point if it's None or if the current point has a smaller y-coordinate
-        if topmost_point is None:
-            topmost_point = (x, y)
-        elif (not rightmost and (y < topmost_point[1])) or (
-            rightmost and (y > topmost_point[1])
-        ):
-            topmost_point = (x, y)
-
-    # Ensure that topmost_point is not None
-    if topmost_point is not None:
-        # Convert the coordinates to integers
-        topmost_point = (round(topmost_point[0]), round(topmost_point[1]))
-
-    return topmost_point
-
-def find_top_left_contour(image):
-    # Convert the image to HSV color space
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-    # Define lower and upper bounds for white color in HSV
-    white_lower = np.array([0, 0, 200])
-    white_upper = np.array([180, 30, 255])
-
-    # Threshold the image to get a binary mask for white color
-    white_mask = cv2.inRange(hsv_image, white_lower, white_upper)
-
-    # Find contours in the white mask
-    contours, _ = cv2.findContours(white_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Sort contours based on their x-coordinate (left to right)
-    contours = sorted(contours, key=lambda x: cv2.boundingRect(x)[0])
-
-    # Get the leftmost contour
-    leftmost_contour = contours[0] if contours else None
-
-    return leftmost_contour
-
-
-def crop_image(image):
-    contour = find_top_left_contour(image)
-    # top lef
-    x, y = find_topmost_point(contour, rightmost=False)
-    if x is not None and y is not None:
-        image = image[y:, x:]
-
-    # top right
-    # x, y = find_topmost_point(contour, rightmost=True)
-    # if x is not None and y is not None:
-    #     image = image[:, :x]
-    return image
-
-
 image_processing = IMAGE_PROCESSING()
 fruit_count = FRUIT_COUNT()
 
 for plant in range(1, 28):
-    directory = "color_image_216"
+    directory = "color_image"
     number = plant
-    img_back = cv2.imread(directory + f"/{number}_back_whole.jpg")
-    img_front = cv2.imread(directory + f"/{number}_front_whole.jpg")
+    img_back = cv2.imread(directory + f"/-{number}.jpg")
+    img_front = cv2.imread(directory + f"/{number}.jpg")
 
     front_back_list = image_processing.get_plant_list(img_front, img_back)
     min_length = min(len(front_back_list[0]), len(front_back_list[1]))
@@ -299,8 +258,6 @@ for plant in range(1, 28):
         back_count = fruit_count.count_fruits(front_back_list[1][i])
         cv2.imshow("front0", (front_back_list[0][i]))
         cv2.imshow("back0", (front_back_list[1][i]))
-        cv2.imshow("front", crop_image(front_back_list[0][i]))
-        cv2.imshow("back", crop_image(front_back_list[1][i]))
         cv2.waitKey(0)
         print(front_count)
         print(back_count)
