@@ -7,17 +7,163 @@ import numpy as np
 class FRUIT_COUNT:
     def __init__(self) -> None:
         # Define color ranges for different fruits
-        self.purple_lower = np.array([120, 50, 50])
-        self.purple_upper = np.array([150, 255, 255])
+
         self.average_eggplant = 243
+        self.average_tomato = 427
+        self.average_pepper = 346
+
+        self.red_lower1 = np.array([0, 100, 100])
+        self.red_upper1 = np.array([10, 255, 255])
+        self.red_lower2 = np.array([160, 100, 100])
+        self.red_upper2 = np.array([180, 255, 255])
 
         self.red_lower = np.array([0, 50, 50])
         self.red_upper = np.array([20, 255, 255])
-        self.average_tomato = 427
 
-        self.yellow_lower = np.array([20, 50, 50])
+        self.yellow_lower = np.array([20, 100, 100])
         self.yellow_upper = np.array([30, 255, 255])
-        self.average_pepper = 346
+
+        self.purple_lower = np.array([120, 50, 50])
+        self.purple_upper = np.array([150, 255, 255])
+
+    def isSimilar(self, mask1, mask2):
+        # Ensure the masks have the same dimensions
+        if mask1.shape != mask2.shape:
+            # raise ValueError("The mask images must have the same dimensions.") TODO: maybe not a good idea to leave it here
+            return False  # TODO: for now returning false as the shape mismatch
+
+        # Calculate the Intersection over Union (IoU)
+        intersection = np.logical_and(mask1, mask2)
+        union = np.logical_or(mask1, mask2)
+        iou = np.sum(intersection) / np.sum(union)
+
+        # You can set a threshold to determine if the masks are similar
+        iou_threshold = 0.2  # Adjust as needed TODO : too less?
+        if iou > iou_threshold:
+            return True
+        else:
+            return False
+
+    def fruit_color_mask(self, img):
+        hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+        # Threshold the image to get binary masks for each color
+        final_mask = cv2.inRange(hsv_image, self.yellow_lower, self.yellow_upper)
+
+        red_mask1 = cv2.inRange(hsv_image, self.red_lower1, self.red_upper1)
+        red_mask2 = cv2.inRange(hsv_image, self.red_lower2, self.red_upper2)
+        final_mask += cv2.bitwise_or(red_mask1, red_mask2)
+
+        final_mask += cv2.inRange(hsv_image, self.purple_lower, self.purple_upper)
+
+        return final_mask
+
+    def getContours(self, image):
+        # Convert the image to HSV color space
+        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        final_mask = self.fruit_color_mask(image)
+
+        # Find contours in the final mask
+        contours, _ = cv2.findContours(
+            final_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        # Filter and count red, yellow, and purple blobs based on size
+        min_blob_area = 200  # Adjust this value based on your requirement
+
+        red_contours = []
+        purple_contours = []
+        yellow_contours = []
+
+        count = 0
+        for _, contour in enumerate(contours):
+            # Calculate the area of the contour
+            area = cv2.contourArea(contour)
+            perimeter = cv2.arcLength(contour, True)
+            if area <= 0 or perimeter <= 0:
+                continue
+
+            # Filter blobs based on area
+            if area > min_blob_area:
+                count += 1
+                # Calculate the average color within the contour
+                average_color = np.mean(
+                    hsv_image[contour[:, 0, 1], contour[:, 0, 0]], axis=0
+                )
+
+                # Determine the dominant color based on the average color
+                if self.red_lower[0] <= average_color[0] <= self.red_upper[0]:
+                    red_contours.append(contour)
+
+                elif self.yellow_lower[0] <= average_color[0] <= self.yellow_upper[0]:
+                    yellow_contours.append(contour)
+
+                elif self.purple_lower[0] <= average_color[0] <= self.purple_upper[0]:
+                    purple_contours.append(contour)
+
+        return [yellow_contours, red_contours, purple_contours]
+
+    def getContourImage(self, contour, shape):
+        height, width = shape
+
+        # Create an empty mask
+        mask = np.zeros((height, width), dtype=np.uint8)
+
+        # Draw the contour on the mask
+        cv2.drawContours(mask, [contour], 0, (255), thickness=cv2.FILLED)
+        return mask
+
+    def count_duplicate_fruits(self, front_image, back_image):
+
+        yellow_contours_front, red_contours_front, purple_contours_front = (
+            self.getContours(front_image)
+        )
+        yellow_contours_back, red_contours_back, purple_contours_back = (
+            self.getContours(back_image)
+        )
+
+        count = 0
+        # Check if we are counting yellow
+        if True:
+            for i, contour_front in enumerate(yellow_contours_front):
+                contour_image_front = self.getContourImage(contour_front, [110, 110])
+
+                for i, contour_back in enumerate(yellow_contours_back):
+                    contour_image_back = self.getContourImage(contour_back, [110, 110])
+
+                    if self.isSimilar(contour_image_front, contour_image_back):
+                        count += round(
+                            cv2.contourArea(contour_front) / self.average_pepper
+                        )
+
+        # Check if we are counting red
+        if True:
+            for i, contour_front in enumerate(red_contours_front):
+                contour_image_front = self.getContourImage(contour_front, [110, 110])
+
+                for i, contour_back in enumerate(red_contours_back):
+                    contour_image_back = self.getContourImage(contour_back, [110, 110])
+
+                    if self.isSimilar(contour_image_front, contour_image_back):
+                        count += round(
+                            cv2.contourArea(contour_front) / self.average_tomato
+                        )
+
+        # Check if we are counting purple
+        if True:
+            for i, contour_front in enumerate(purple_contours_front):
+                contour_image_front = self.getContourImage(contour_front, [110, 110])
+
+                for i, contour_back in enumerate(purple_contours_back):
+                    contour_image_back = self.getContourImage(contour_back, [110, 110])
+
+                    if self.isSimilar(contour_image_front, contour_image_back):
+                        count += round(
+                            cv2.contourArea(contour_front) / self.average_eggplant
+                        )
+
+        return count
 
     def get_contours_fruit(self, image):
         # Convert the image to HSV color space
@@ -72,14 +218,14 @@ class FRUIT_COUNT:
 
                 # Determine the dominant color based on the average color
                 if self.red_lower[0] <= average_color[0] <= self.red_upper[0]:
-                    red_fruits_count += math.ceil(area / self.average_tomato)
+                    red_fruits_count += round(area / self.average_tomato)
                 elif (
                     self.yellow_lower[0] <= average_color[0] <= self.yellow_upper[0]
                     and circularity >= 0.30
                 ):
-                    yellow_fruits_count += math.ceil(area / self.average_pepper)
+                    yellow_fruits_count += round(area / self.average_pepper)
                 elif self.purple_lower[0] <= average_color[0] <= self.purple_upper[0]:
-                    purple_fruits_count += math.ceil(area / self.average_eggplant)
+                    purple_fruits_count += round(area / self.average_eggplant)
 
         return [yellow_fruits_count, red_fruits_count, purple_fruits_count]
 
@@ -136,15 +282,17 @@ class IMAGE_PROCESSING:
                 square_images.append((x, square_image))
         square_images.sort(key=lambda x: x[0])
         return [square_image for _, square_image in square_images]
+
     def is_white_point(self, img, point):
-            hsv_image = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2HSV)
-            return np.all(
-                np.logical_and(
-                    self.white_lower <= hsv_image[point[1]][point[0]],
-                    hsv_image[point[1]][point[0]] <= self.white_upper,
-                ))
-    
-    def is_white_around (self,img, point):
+        hsv_image = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2HSV)
+        return np.all(
+            np.logical_and(
+                self.white_lower <= hsv_image[point[1]][point[0]],
+                hsv_image[point[1]][point[0]] <= self.white_upper,
+            )
+        )
+
+    def is_white_around(self, img, point):
         is_white = True
         for x in range(-3, -3):
             for y in range(-3, -3):
@@ -152,8 +300,9 @@ class IMAGE_PROCESSING:
                 y_now = y + point[1]
 
                 if x_now < img.shape[1] and y_now < img.shape[0]:
-                    is_white = is_white and self.is_white_point(img,[x_now, y_now])
+                    is_white = is_white and self.is_white_point(img, [x_now, y_now])
         return is_white
+
     def get_square_image(self, contour, image):
         # square_points = self.largest_contained_square(contour)
         epsilon = 0.04 * cv2.arcLength(contour, True)
@@ -187,11 +336,12 @@ class IMAGE_PROCESSING:
         expected_w = 135
 
         if w < expected_w:
-            if self.is_white_around(image, [left_most[0]+expected_w, left_most[1]]):
+            if self.is_white_around(image, [left_most[0] + expected_w, left_most[1]]):
                 right_most[0] = left_most[0] + expected_w
-            elif self.is_white_around(image, [right_most[0]-expected_w, right_most[1]]):
+            elif self.is_white_around(
+                image, [right_most[0] - expected_w, right_most[1]]
+            ):
                 left_most[0] = right_most[0] - expected_w
-
 
         # Crop the region from the original image
         cropped_image = image[y : y + h, left_most[0] : right_most[0]]
@@ -270,8 +420,8 @@ for plant in range(1, 28):
     number = plant
     img_back = cv2.imread(directory + f"/-{number}.jpg")
     img_front = cv2.imread(directory + f"/{number}.jpg")
-    cv2.imshow(f'front {number}', img_front)
-    cv2.imshow(f'back {number}', img_back)
+    cv2.imshow(f"front {number}", img_front)
+    cv2.imshow(f"back {number}", img_back)
 
     front_back_list = image_processing.get_plant_list(img_front, img_back)
     min_length = min(len(front_back_list[0]), len(front_back_list[1]))
@@ -280,14 +430,17 @@ for plant in range(1, 28):
     for i in range(min_length):
         front_count = fruit_count.count_fruits(front_back_list[0][i])
         back_count = fruit_count.count_fruits(front_back_list[1][i])
+        duplicate = fruit_count.count_duplicate_fruits(
+            front_back_list[0][i], front_back_list[0][i]
+        )
         cv2.imshow(f"front_{number}_{i}", (front_back_list[0][i]))
         cv2.imshow(f"back_{number}_{i}", (front_back_list[1][i]))
-        # print(front_count)
-        # print(back_count)
-        # print()
+        print("front", front_count)
+        print("back", back_count)
+        print("duplicate", duplicate)
+        print()
 
         sum_all = [i + j + k for i, j, k in zip(sum_all, front_count, back_count)]
-        # print(sum_all)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
