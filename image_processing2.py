@@ -282,6 +282,7 @@ for plant in range(1, 28):
         cv2.imshow("front0", (front_back_list[0][i]))
         cv2.imshow("back0", (front_back_list[1][i]))
         cv2.waitKey(0)
+        cv2.destroyAllWindows()
         # print(front_count)
         # print(back_count)
         # print()
