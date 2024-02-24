@@ -38,7 +38,7 @@ class FRUIT_COUNT:
         iou = np.sum(intersection) / np.sum(union)
 
         # You can set a threshold to determine if the masks are similar
-        iou_threshold = 0.2  # Adjust as needed TODO : too less?
+        iou_threshold = 0.5  # Adjust as needed TODO : too less?
         if iou > iou_threshold:
             return True
         else:
