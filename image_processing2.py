@@ -19,7 +19,7 @@ class FRUIT_COUNT:
         self.yellow_upper = np.array([30, 255, 255])
         self.average_pepper = 346
 
-    def get_contours_fruit(self, image) -
+    def get_contours_fruit(self, image):
         # Convert the image to HSV color space
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
@@ -136,7 +136,24 @@ class IMAGE_PROCESSING:
                 square_images.append((x, square_image))
         square_images.sort(key=lambda x: x[0])
         return [square_image for _, square_image in square_images]
+    def is_white_point(self, img, point):
+            hsv_image = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2HSV)
+            return np.all(
+                np.logical_and(
+                    self.white_lower <= hsv_image[point[1]][point[0]],
+                    hsv_image[point[1]][point[0]] <= self.white_upper,
+                ))
+    
+    def is_white_around (self,img, point):
+        is_white = True
+        for x in range(20):
+            for y in range(20):
+                x_now = x + point[0]
+                y_now = y+ point[1]
 
+                if x_now < img.shape[1] and y_now < img.shape[0]:
+                    is_white = is_white and self.is_white_point(img,[x_now, y_now])
+        return is_white
     def get_square_image(self, contour, image):
         # square_points = self.largest_contained_square(contour)
         epsilon = 0.04 * cv2.arcLength(contour, True)
@@ -166,6 +183,14 @@ class IMAGE_PROCESSING:
             right_most[0] -= 1
         # print(left_most)
         # print(right_most)
+        w = right_most[0] - left_most[0] + 1
+        expected_w = 120
+        if w < 120:
+            if self.is_white_around(image, [left_most[0]+expected_w, left_most[1]]):
+                right_most[0] = left_most[0] + expected_w
+            elif self.is_white_around(image, [right_most[0]-expected_w, right_most[1]]):
+                left_most[0] = right_most[0] - expected_w
+            
 
         # Crop the region from the original image
         cropped_image = image[y : y + h, left_most[0] : right_most[0]]
