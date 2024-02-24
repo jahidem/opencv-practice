@@ -146,10 +146,10 @@ class IMAGE_PROCESSING:
     
     def is_white_around (self,img, point):
         is_white = True
-        for x in range(20):
-            for y in range(20):
+        for x in range(-3, -3):
+            for y in range(-3, -3):
                 x_now = x + point[0]
-                y_now = y+ point[1]
+                y_now = y + point[1]
 
                 if x_now < img.shape[1] and y_now < img.shape[0]:
                     is_white = is_white and self.is_white_point(img,[x_now, y_now])
@@ -184,13 +184,14 @@ class IMAGE_PROCESSING:
         # print(left_most)
         # print(right_most)
         w = right_most[0] - left_most[0] + 1
-        expected_w = 120
-        if w < 120:
+        expected_w = 135
+
+        if w < expected_w:
             if self.is_white_around(image, [left_most[0]+expected_w, left_most[1]]):
                 right_most[0] = left_most[0] + expected_w
             elif self.is_white_around(image, [right_most[0]-expected_w, right_most[1]]):
                 left_most[0] = right_most[0] - expected_w
-            
+
 
         # Crop the region from the original image
         cropped_image = image[y : y + h, left_most[0] : right_most[0]]
@@ -279,13 +280,14 @@ for plant in range(1, 28):
     for i in range(min_length):
         front_count = fruit_count.count_fruits(front_back_list[0][i])
         back_count = fruit_count.count_fruits(front_back_list[1][i])
-        cv2.imshow("front0", (front_back_list[0][i]))
-        cv2.imshow("back0", (front_back_list[1][i]))
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        cv2.imshow(f"front_{number}_{i}", (front_back_list[0][i]))
+        cv2.imshow(f"back_{number}_{i}", (front_back_list[1][i]))
         # print(front_count)
         # print(back_count)
         # print()
 
         sum_all = [i + j + k for i, j, k in zip(sum_all, front_count, back_count)]
         # print(sum_all)
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
