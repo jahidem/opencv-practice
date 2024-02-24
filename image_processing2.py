@@ -431,7 +431,7 @@ for plant in range(1, 28):
         front_count = fruit_count.count_fruits(front_back_list[0][i])
         back_count = fruit_count.count_fruits(front_back_list[1][i])
         duplicate = fruit_count.count_duplicate_fruits(
-            front_back_list[0][i], front_back_list[0][i]
+            front_back_list[0][i], front_back_list[1][i]
         )
         cv2.imshow(f"front_{number}_{i}", (front_back_list[0][i]))
         cv2.imshow(f"back_{number}_{i}", (front_back_list[1][i]))
