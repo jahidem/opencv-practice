@@ -2,7 +2,6 @@ import math
 from typing import List, Sequence
 import cv2
 import numpy as np
-from cv2.typing import MatLike
 
 
 class FRUIT_COUNT:
@@ -20,7 +19,7 @@ class FRUIT_COUNT:
         self.yellow_upper = np.array([30, 255, 255])
         self.average_pepper = 346
 
-    def get_contours_fruit(self, image) -> Sequence[MatLike]:
+    def get_contours_fruit(self, image) -
         # Convert the image to HSV color space
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
@@ -102,7 +101,7 @@ class IMAGE_PROCESSING:
 
         return iou
 
-    def get_white_parts(self, image) -> List[MatLike]:
+    def get_white_parts(self, image):
         # Convert the image to HSV color space
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
@@ -138,18 +137,16 @@ class IMAGE_PROCESSING:
         square_images.sort(key=lambda x: x[0])
         return [square_image for _, square_image in square_images]
 
-    def get_square_image(self, contour, image) -> MatLike:
+    def get_square_image(self, contour, image):
         # square_points = self.largest_contained_square(contour)
         epsilon = 0.04 * cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, epsilon, True)
         x, y, w, h = cv2.boundingRect(approx)
 
-        cv2.imshow("img", image)
         hsv_image = cv2.cvtColor(image.copy(), cv2.COLOR_BGR2HSV)
 
         left_most = [x, y]
         while left_most[0] < x + w:
-            print(left_most)
             if np.all(
                 np.logical_and(
                     self.white_lower <= hsv_image[left_most[1]][left_most[0]],
@@ -175,7 +172,7 @@ class IMAGE_PROCESSING:
 
         return cropped_image
 
-    def largest_contained_square(self, contour) -> MatLike:
+    def largest_contained_square(self, contour):
         epsilon = 0.04 * cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, epsilon, True)
         hull = cv2.convexHull(approx)
@@ -247,6 +244,8 @@ for plant in range(1, 28):
     number = plant
     img_back = cv2.imread(directory + f"/-{number}.jpg")
     img_front = cv2.imread(directory + f"/{number}.jpg")
+    cv2.imshow('front {number}', img_front)
+    cv2.imshow(f'back {number}', img_back)
 
     front_back_list = image_processing.get_plant_list(img_front, img_back)
     min_length = min(len(front_back_list[0]), len(front_back_list[1]))
